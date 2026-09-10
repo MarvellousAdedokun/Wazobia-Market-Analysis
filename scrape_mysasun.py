@@ -71,5 +71,5 @@ if __name__ == "__main__":
     print(f"Filtered to {len(staples_df)} staple-matching rows")
     print(staples_df.head(20))
 
-    staples_df.to_csv("mysasun_prices.csv", index=False)
+    staples_df.to_csv(r"c:/Users/HP/Documents/GitHub/Wazobia-Market-Analysis/mysasun_prices.csv", index=False)
     print("Saved to mysasun_prices.csv")
