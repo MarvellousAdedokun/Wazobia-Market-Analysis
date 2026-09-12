@@ -1,5 +1,5 @@
 """
-Wazobia Market price comparison — Step 4: interactive dashboard
+Wazobia Market price comparison — Step 5 (was Step 4): interactive dashboard
 Run with: streamlit run dashboard.py
 """
 
@@ -10,7 +10,6 @@ import plotly.express as px
 
 DB_PATH = "prices.db"
 
-# ForgeLabs brand colors
 ORANGE = "#E8630A"
 BLACK = "#0A0A0A"
 
@@ -21,45 +20,45 @@ df = pd.read_sql_query("SELECT * FROM prices", conn)
 conn.close()
 
 st.title("Is Wazobia Market actually pricier than competitors?")
-st.caption("Actually with Marvellous — real price data, no guessing")
+st.caption("Actually with Marvellous — real price data, normalized per unit weight")
 
-# Sidebar filters
 st.sidebar.header("Filters")
-categories = st.sidebar.multiselect(
-    "Category", options=sorted(df["category"].dropna().unique()),
-    default=sorted(df["category"].dropna().unique())
+items = st.sidebar.multiselect(
+    "Item", options=sorted(df["canonical_item"].unique()),
+    default=sorted(df["canonical_item"].unique())
 )
 businesses = st.sidebar.multiselect(
     "Business", options=sorted(df["business"].unique()),
     default=sorted(df["business"].unique())
 )
 
-filtered = df[df["category"].isin(categories) & df["business"].isin(businesses)]
+filtered = df[df["canonical_item"].isin(items) & df["business"].isin(businesses)]
 
-# Top-level metric
-col1, col2 = st.columns(2)
-with col1:
-    avg_by_business = filtered.groupby("business")["price"].mean().round(2)
-    for biz, avg in avg_by_business.items():
-        st.metric(f"{biz} — avg price", f"${avg}")
+# Only items both stores sell — this is the real comparison
+both_stores = filtered.groupby("canonical_item")["business"].nunique()
+comparable_items = both_stores[both_stores == df["business"].nunique()].index.tolist()
 
-# Category comparison chart
-st.subheader("Average price by category")
-category_avg = filtered.groupby(["category", "business"])["price"].mean().reset_index()
-fig = px.bar(
-    category_avg, x="category", y="price", color="business",
-    barmode="group", color_discrete_map={"My Sasun": BLACK, "Wazobia Market": ORANGE}
-)
-st.plotly_chart(fig, use_container_width=True)
+st.subheader(f"Unit price comparison — items sold by both stores ({len(comparable_items)} items)")
+comparable_df = filtered[filtered["canonical_item"].isin(comparable_items)]
 
-# Head-to-head table for products both sell
-st.subheader("Head-to-head: same product, different store")
-mysasun = filtered[filtered["business"] == "My Sasun"][["product_name", "price"]]
-wazobia = filtered[filtered["business"] == "Wazobia Market"][["product_name", "price"]]
-merged = mysasun.merge(wazobia, on="product_name", suffixes=("_mysasun", "_wazobia"))
-merged["difference"] = (merged["price_wazobia"] - merged["price_mysasun"]).round(2)
-st.dataframe(merged, use_container_width=True)
+if comparable_df.empty:
+    st.warning("No items overlap between the selected businesses yet. "
+               "Fill in more rows in wazobia_manual_prices.csv to get more overlap.")
+else:
+    avg_unit_price = comparable_df.groupby(["canonical_item", "business"])["unit_price"].mean().reset_index()
+    fig = px.bar(
+        avg_unit_price, x="canonical_item", y="unit_price", color="business",
+        barmode="group", color_discrete_map={"My Sasun": BLACK, "Wazobia Market": ORANGE},
+        labels={"unit_price": "Price per gram/ml ($)"}
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
-# Raw data, for transparency
-with st.expander("See raw data"):
+    # % difference table
+    pivot = avg_unit_price.pivot(index="canonical_item", columns="business", values="unit_price")
+    if "My Sasun" in pivot.columns and "Wazobia Market" in pivot.columns:
+        pivot["pct_difference"] = ((pivot["Wazobia Market"] - pivot["My Sasun"]) / pivot["My Sasun"] * 100).round(1)
+        st.subheader("% price difference (Wazobia vs. My Sasun)")
+        st.dataframe(pivot.sort_values("pct_difference", ascending=False), use_container_width=True)
+
+with st.expander("See all normalized data (including items only one store sells)"):
     st.dataframe(filtered, use_container_width=True)

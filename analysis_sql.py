@@ -1,6 +1,7 @@
 """
-Wazobia Market price comparison — Step 3: SQL analysis
-Run real SQL queries against the SQLite database instead of pandas filtering.
+Wazobia Market price comparison — Step 4 (was Step 3): SQL analysis
+Compares UNIT PRICE (price per gram/ml) across canonical items, not raw price
+— this is what makes the comparison fair across different pack sizes.
 """
 
 import sqlite3
@@ -16,36 +17,45 @@ def run_query(query):
     return df
 
 
-# Average price per business, per product category
-AVG_BY_CATEGORY = """
+# Average unit price per business, per canonical item
+AVG_UNIT_PRICE = """
 SELECT
+    canonical_item,
     business,
-    category,
-    ROUND(AVG(price), 2) AS avg_price,
+    ROUND(AVG(unit_price), 5) AS avg_unit_price,
     COUNT(*) AS item_count
 FROM prices
-GROUP BY business, category
-ORDER BY category, business;
+GROUP BY canonical_item, business
+ORDER BY canonical_item, business;
 """
 
-# Direct product-by-product comparison (only products both stores sell)
+# Head-to-head: only items BOTH stores actually sell, with % difference
 HEAD_TO_HEAD = """
 SELECT
-    m.product_name,
-    m.price AS mysasun_price,
-    w.price AS wazobia_price,
-    ROUND(w.price - m.price, 2) AS price_difference
+    m.canonical_item,
+    ROUND(AVG(m.unit_price), 5) AS mysasun_unit_price,
+    ROUND(AVG(w.unit_price), 5) AS wazobia_unit_price,
+    ROUND(
+        ((AVG(w.unit_price) - AVG(m.unit_price)) / AVG(m.unit_price)) * 100, 1
+    ) AS pct_difference
 FROM prices m
 JOIN prices w
-    ON m.product_name = w.product_name
+    ON m.canonical_item = w.canonical_item
     AND m.business = 'My Sasun'
     AND w.business = 'Wazobia Market'
-ORDER BY price_difference DESC;
+GROUP BY m.canonical_item
+ORDER BY pct_difference DESC;
 """
 
 if __name__ == "__main__":
-    print("=== Average price by category ===")
-    print(run_query(AVG_BY_CATEGORY))
+    print("=== Average unit price by canonical item and business ===")
+    print(run_query(AVG_UNIT_PRICE).to_string())
 
-    print("\n=== Head-to-head product comparison ===")
-    print(run_query(HEAD_TO_HEAD))
+    print("\n=== Head-to-head: items both stores sell (% difference) ===")
+    result = run_query(HEAD_TO_HEAD)
+    if result.empty:
+        print("No overlapping canonical items yet — check that Wazobia's product_name "
+              "text contains one of the same category keywords (garri, palm oil, "
+              "egusi, etc.) as normalize.py looks for.")
+    else:
+        print(result.to_string())
