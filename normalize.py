@@ -9,6 +9,17 @@ Run this AFTER scrape_mysasun.py and AFTER filling in wazobia_manual_prices.csv.
 
 import pandas as pd
 import re
+import os
+from pathlib import Path
+
+# Finds the directory where normalize.py actually lives
+BASE_DIR = Path(__file__).resolve().parent
+file_path = BASE_DIR / "mysasun_prices.csv"
+
+
+# Load the CSV using the dynamic path
+mysasun_df = pd.read_csv(file_path)
+
 
 # --- Unit conversion: everything to grams (weight) or ml (volume) ---
 WEIGHT_TO_GRAMS = {"lb": 453.592, "lbs": 453.592, "kg": 1000, "g": 1, "oz": 28.3495}
@@ -122,12 +133,13 @@ def normalize_dataframe(df, size_col="variant"):
 
 if __name__ == "__main__":
     # --- My Sasun (scraped) ---
-    mysasun_df = pd.read_csv(r"C:\Users\HP\Documents\GitHub\Wazobia-Market-Analysis\mysasun_prices.csv")
+    mysasun_df = pd.read_csv(file_path)
     mysasun_norm = normalize_dataframe(mysasun_df, size_col="variant")
     print(f"My Sasun: normalized {len(mysasun_norm)} of {len(mysasun_df)} rows")
 
     # --- Wazobia (manually entered) ---
-    wazobia_df = pd.read_csv(r"C:\Users\HP\Documents\GitHub\Wazobia-Market-Analysis\wazobia_manual_prices.csv")
+    wazobia_file_path = BASE_DIR / "wazobia_manual_prices.csv"
+    wazobia_df = pd.read_csv(wazobia_file_path)
     wazobia_df = wazobia_df.dropna(subset=["price"])  # skip rows not filled in yet
     wazobia_norm = normalize_dataframe(wazobia_df, size_col="size")
     print(f"Wazobia: normalized {len(wazobia_norm)} of {len(wazobia_df)} filled-in rows")
