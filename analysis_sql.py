@@ -4,13 +4,23 @@ Compares UNIT PRICE (price per gram/ml) across canonical items, not raw price
 — this is what makes the comparison fair across different pack sizes.
 """
 
+from pathlib import Path
 import sqlite3
 import pandas as pd
 
-DB_PATH = "prices.db"
+# Get the directory where this script is located
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = BASE_DIR / "prices.db"
 
 
 def run_query(query):
+    # Ensure the database exists before querying
+    if not DB_PATH.exists():
+        raise FileNotFoundError(
+            f"Database file not found at: {DB_PATH}\n"
+            f"Please run 'build_db.py' first to initialize the database."
+        )
+
     conn = sqlite3.connect(DB_PATH)
     df = pd.read_sql_query(query, conn)
     conn.close()
