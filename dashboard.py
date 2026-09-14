@@ -3,17 +3,28 @@ Wazobia Market price comparison — Step 5 (was Step 4): interactive dashboard
 Run with: streamlit run dashboard.py
 """
 
-import streamlit as st
-import pandas as pd
+from pathlib import Path
 import sqlite3
+import pandas as pd
 import plotly.express as px
+import streamlit as st
 
-DB_PATH = "prices.db"
+# Get the directory where this script is located
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = BASE_DIR / "prices.db"
 
 ORANGE = "#E8630A"
 BLACK = "#0A0A0A"
 
 st.set_page_config(page_title="Wazobia Market Price Comparison", layout="wide")
+
+# Ensure the database exists before attempting to connect
+if not DB_PATH.exists():
+    st.error(
+        f"Database file not found at: `{DB_PATH}`. "
+        "Please run `build_db.py` first to generate the SQLite database."
+    )
+    st.stop()
 
 conn = sqlite3.connect(DB_PATH)
 df = pd.read_sql_query("SELECT * FROM prices", conn)
