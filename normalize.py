@@ -122,12 +122,12 @@ def normalize_dataframe(df, size_col="variant"):
 
 if __name__ == "__main__":
     # --- My Sasun (scraped) ---
-    mysasun_df = pd.read_csv("mysasun_prices.csv")
+    mysasun_df = pd.read_csv(r"C:\Users\HP\Documents\GitHub\Wazobia-Market-Analysis\mysasun_prices.csv")
     mysasun_norm = normalize_dataframe(mysasun_df, size_col="variant")
     print(f"My Sasun: normalized {len(mysasun_norm)} of {len(mysasun_df)} rows")
 
     # --- Wazobia (manually entered) ---
-    wazobia_df = pd.read_csv("wazobia_manual_prices.csv")
+    wazobia_df = pd.read_csv(r"C:\Users\HP\Documents\GitHub\Wazobia-Market-Analysis\wazobia_manual_prices.csv")
     wazobia_df = wazobia_df.dropna(subset=["price"])  # skip rows not filled in yet
     wazobia_norm = normalize_dataframe(wazobia_df, size_col="size")
     print(f"Wazobia: normalized {len(wazobia_norm)} of {len(wazobia_df)} filled-in rows")
